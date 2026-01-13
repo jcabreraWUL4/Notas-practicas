@@ -2,9 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:focusable="true"
     android:orientation="vertical"
     android:padding="16dp"
     android:clickable="true"
+    android:fitsSystemWindows="true"
     android:focusableInTouchMode="true">
 
     <EditText
@@ -14,7 +16,6 @@
         android:layout_weight="1"
         android:background="@android:color/transparent"
         android:gravity="top"
-        android:layout_marginTop="?attr/actionBarSize"
         android:hint="Escribe una nota" />
 
     <TextView
