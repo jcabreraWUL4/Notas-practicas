@@ -16,11 +16,11 @@
         android:orientation="horizontal">
 
         <EditText
-            android:id="@+id/editTextTituloNota"
+            android:id="@+id/editTextCrearNota"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Escribe un título y pulsa ✔"
+            android:hint="Titulo de la nota"
             android:imeOptions="actionDone"
             android:inputType="textCapSentences"
             android:maxLines="1" />
