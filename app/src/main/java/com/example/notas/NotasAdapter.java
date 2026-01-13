@@ -80,8 +80,8 @@ public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHold
 
         @Override
         public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-            MenuItem menuItemEliminar = menu.add(Menu.NONE, 1, 1, "Eliminar");
-            MenuItem menuItemRenombrar = menu.add(Menu.NONE, 2, 2, "Renombrar");
+            MenuItem menuItemRenombrar = menu.add(Menu.NONE, 1, 1, "Renombrar");
+            MenuItem menuItemEliminar = menu.add(Menu.NONE, 2, 2, "Eliminar");
 
             menuItemEliminar.setOnMenuItemClickListener(item -> onNotaListener.onContextEliminarNota(currentNota.getId()));
             menuItemRenombrar.setOnMenuItemClickListener(item -> onNotaListener.onContextRenombrarNota(currentNota.getId()));
