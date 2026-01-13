@@ -43,18 +43,23 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity);
 
+        // ReciclerView
         recyclerView = findViewById(R.id.recyclerViewNotas);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        // Crear y renombrarNota
         editTextCrearNota = findViewById(R.id.editTextCrearNota);
         buttonCrearNota = findViewById(R.id.buttonCrearNota);
 
+        // Sobre el recyclerview
         notas = new ArrayList<>();
         adapter = new NotasAdapter(notas, this);
         recyclerView.setAdapter(adapter);
 
+        // Crear nueva nota
         buttonCrearNota.setOnClickListener(v -> crearNuevaNota());
 
+        // Crear nueva nota con enter
         editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
                 crearNuevaNota();
@@ -72,11 +77,17 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
+        // Al pulsar
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            // Crear una vista con el foco actual
             View v = getCurrentFocus();
+
+            // Si la vista actual es un EditText
             if (v instanceof EditText) {
+                // Crear rectangulo
                 Rect outRect = new Rect();
                 v.getGlobalVisibleRect(outRect);
+                // Si no se toca dentro del rectangulo, perder el foco
                 if (!outRect.contains((int)event.getRawX(), (int)event.getRawY())) {
                     v.clearFocus();
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -89,14 +100,19 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
 
     private void crearNuevaNota() {
         String titulo = editTextCrearNota.getText().toString().trim();
+
+        // Si no hay titulo, no hacer nada
         if (titulo.isEmpty()) {
             Toast.makeText(this, "El título no puede estar vacío", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // Datos de la nota
         int nuevaNotaId = generarIdUnico();
         String fechaActual = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
         String metadatos = titulo + "//;;" + fechaActual + "\n";
+
+        // Escribir los metadatos en el archivo
         try (FileOutputStream fos = openFileOutput("nota_" + nuevaNotaId + ".txt", MODE_PRIVATE)) {
             fos.write(metadatos.getBytes());
         } catch (IOException e) {
@@ -105,6 +121,7 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
             return;
         }
 
+        // Iniciar la activity pasando la nota iniciada
         Intent intent = new Intent(this, DentroDeNotaActivity.class);
         intent.putExtra("NOTA_ID", nuevaNotaId);
         startActivity(intent);
@@ -112,12 +129,17 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
     }
 
     private void cargarNotasExistentes() {
+        // Limpiar la lista
         notas.clear();
+
+        // Leer los archivos que hay creados
         File[] archivos = getFilesDir().listFiles();
         if (archivos == null) return;
 
+        // Ordenar los archivos por fecha de modificacion
         Arrays.sort(archivos, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
 
+        // Leer los metadatos de todos los archivos y crear una Nota con cada uno
         for (File archivo : archivos) {
             if (archivo.getName().startsWith("nota_") && archivo.getName().endsWith(".txt")) {
                 try {
@@ -137,6 +159,7 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
 
     @Override
     public void onClickVerNota(int notaId) {
+        // Iniciar la activity pasando la nota iniciada
         Intent intent = new Intent(this, DentroDeNotaActivity.class);
         intent.putExtra("NOTA_ID", notaId);
         //Toast.makeText(this, "Nota seleccionada: " + notaId, Toast.LENGTH_SHORT).show();
@@ -152,21 +175,25 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
 
     @Override
     public boolean onContextRenombrarNota(int notaId) {
+        // Leer el contenido completo de la nota
         String nombreArchivo = "nota_" + notaId + ".txt";
         String contenidoCompleto = leerContenidoCompleto(nombreArchivo);
         if (contenidoCompleto == null) return false;
 
+        // Separar la cabecera del cuerpo
         String[] lineas = contenidoCompleto.split("\n", 2);
         String cuerpoNota = (lineas.length > 1) ? lineas[1] : "";
         String titulo = lineas[0].split("//;;")[0].trim();
 
+        // Cambiar el editText de crear para que el usuario vea que lo renombra ahi
         editTextCrearNota.setText(titulo);
         editTextCrearNota.setHint("Renombra la nota");
         editTextCrearNota.requestFocus();
 
         editTextCrearNota.setSelection(editTextCrearNota.getText().length());
-        buttonCrearNota.setColorFilter(200);
+        buttonCrearNota.setColorFilter(1000);
 
+        // Renombrar con enter
         editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
                 renombrarNota(titulo, cuerpoNota, nombreArchivo);
@@ -175,34 +202,14 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
             return false;
         });
 
+        // Renombrar con boton
         buttonCrearNota.setOnClickListener(v -> {
             renombrarNota(titulo, cuerpoNota, nombreArchivo);
         });
         return true;
     }
 
-    /*@Override
-    public void onTituloChanged(int notaId, String nuevoTitulo) {
-        String nombreArchivo = "nota_" + notaId + ".txt";
-        String contenidoCompleto = leerContenidoCompleto(nombreArchivo);
-        if (contenidoCompleto == null) return;
-
-        String[] lineas = contenidoCompleto.split("\n", 2);
-        String cuerpoNota = (lineas.length > 1) ? lineas[1] : "";
-        
-        // Actualizamos la fecha y reconstruimos los metadatos
-        String fechaActual = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
-        String nuevosMetadatos = nuevoTitulo.trim() + "//;;" + fechaActual + "\n";
-        String nuevoContenidoCompleto = nuevosMetadatos + cuerpoNota;
-
-        try (FileOutputStream fos = openFileOutput(nombreArchivo, MODE_PRIVATE)) {
-            fos.write(nuevoContenidoCompleto.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-    }*/
-
+    // Funciones auxiliares
     private String leerPrimeraLinea(String nombreArchivo) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(openFileInput(nombreArchivo)))) {
             return reader.readLine();
@@ -243,16 +250,18 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
     private boolean eliminarNota(int notaId) {
         String nombreArchivo = "nota_" + notaId + ".txt";
         File archivo = new File(getFilesDir(), nombreArchivo);
+
         if (archivo.exists()) {
             archivo.delete();
             ArrayList<Nota> aEliminar = new ArrayList<>();
+
             for (Nota nota : notas) {
                 if (nota.getId() == notaId) {
                     aEliminar.add(nota);
                 }
             }
-            notas.removeAll(aEliminar);
 
+            notas.removeAll(aEliminar);
             adapter.notifyDataSetChanged();
         } else {
             Toast.makeText(this, "La nota no existe en el dispositivo", Toast.LENGTH_SHORT).show();
@@ -262,8 +271,16 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
     }
 
     private boolean renombrarNota(String titulo, String cuerpoNota, String nombreArchivo) {
+        // Leer el contenido completo de la nota
         String nuevoTitulo = editTextCrearNota.getText().toString().trim();
-        if (!nuevoTitulo.equals(titulo)) {
+
+        // Si no hay titulo, no hacer nada
+        if (nuevoTitulo.isEmpty()) {
+            Toast.makeText(this, "El título no puede estar vacío", Toast.LENGTH_SHORT).show();
+        }
+
+        // Si el titulo es distinto, renombrar la nota
+        else if (!nuevoTitulo.equals(titulo)) {
             String fechaActual = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
             String nuevosMetadatos = nuevoTitulo + "//;;" + fechaActual + "\n";
             String nuevoContenidoCompleto = nuevosMetadatos + cuerpoNota;
@@ -274,22 +291,30 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
                 e.printStackTrace();
                 return false;
             }
-
-            cargarNotasExistentes();
-            editTextCrearNota.setText("");
-            buttonCrearNota.setColorFilter(null);
-            editTextCrearNota.setHint("Crea una nota");
-            buttonCrearNota.setOnClickListener(v1 -> {
-                crearNuevaNota();
-            });
-            editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
-                if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
-                    crearNuevaNota();
-                    return true;
-                }
-                return false;
-            });
         }
+
+        // Actualizar la lista
+        cargarNotasExistentes();
+
+        // Reestablecer los valores a crear
+        editTextCrearNota.setText("");
+        buttonCrearNota.setColorFilter(null);
+        editTextCrearNota.setHint("Crea una nota");
+
+        // Volver a poner el listener a crearNota
+        buttonCrearNota.setOnClickListener(v1 -> {
+            crearNuevaNota();
+        });
+
+        // Devolver el listener a crearNota
+        editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
+                crearNuevaNota();
+                return true;
+            }
+            return false;
+        });
+
         return true;
     }
 }
