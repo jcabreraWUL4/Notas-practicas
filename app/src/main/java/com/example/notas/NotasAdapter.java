@@ -2,20 +2,20 @@ package com.example.notas;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
-import java.util.Objects;
 
 public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHolder> {
 
@@ -23,8 +23,10 @@ public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHold
     private final OnNotaListener onNotaListener;
 
     public interface OnNotaListener {
-        void onVerNotaClick(int notaId);
-        void onTituloChanged(int notaId, String nuevoTitulo);
+        void onClickVerNota(int notaId);
+        //void onTituloChanged(int notaId, String nuevoTitulo);
+        boolean onContextEliminarNota(int notaId);
+        boolean onContextRenombrarNota(int notaId);
     }
 
     public NotasAdapter(List<Nota> notas, OnNotaListener onNotaListener) {
@@ -36,6 +38,7 @@ public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHold
     @Override
     public NotaViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.nota_item, parent, false);
+
         return new NotaViewHolder(view, onNotaListener);
     }
 
@@ -49,32 +52,41 @@ public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHold
         return notas.size();
     }
 
-    static class NotaViewHolder extends RecyclerView.ViewHolder {
-        final EditText editTextTitulo;
-        final Button buttonVerNota;
+    static class NotaViewHolder extends RecyclerView.ViewHolder implements View.OnCreateContextMenuListener {
+        //final EditText editTextTitulo;
+        //final Button buttonVerNota;
         final TextView textViewFecha;
+        final TextView textViewTitulo;
         final OnNotaListener onNotaListener;
         final Handler handler = new Handler(Looper.getMainLooper());
         Runnable guardarRunnable;
         TextWatcher textWatcher;
+        LinearLayout notaItem;
+        private Nota currentNota;
 
         public NotaViewHolder(@NonNull View itemView, OnNotaListener onNotaListener) {
             super(itemView);
             this.onNotaListener = onNotaListener;
-            editTextTitulo = itemView.findViewById(R.id.tituloNotaRecyclerView);
-            buttonVerNota = itemView.findViewById(R.id.buttonVerNota);
+            textViewTitulo = itemView.findViewById(R.id.tituloNotaRecyclerView);
             textViewFecha = itemView.findViewById(R.id.fechaNotaRecyclerView);
+            //buttonVerNota = itemView.findViewById(R.id.buttonVerNota);
+
+            notaItem = itemView.findViewById(R.id.notaItem);
+            // Le decimos a la vista del ítem que este ViewHolder se encargará de crear el menú
+            itemView.setOnCreateContextMenuListener(this);
         }
 
         void bind(Nota nota) {
-            if (textWatcher != null) {
+            this.currentNota = nota; // Guardamos la nota actual para usarla en el menú
+            /*if (textWatcher != null) {
                 editTextTitulo.removeTextChangedListener(textWatcher);
-            }
+            }*/
 
-            editTextTitulo.setText(nota.getTitulo());
+            textViewTitulo.setText(nota.getTitulo());
             textViewFecha.setText(nota.getFecha());
-
-            textWatcher = new TextWatcher() {
+            notaItem.setOnClickListener(v -> onNotaListener.onClickVerNota(nota.getId()));
+            
+            /*textWatcher = new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -88,15 +100,16 @@ public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHold
                     guardarRunnable = () -> {
                         String nuevoTitulo = s.toString().trim();
                         if (!Objects.equals(nota.getTitulo(), nuevoTitulo)) {
-                            onNotaListener.onTituloChanged(nota.getId(), nuevoTitulo);
+                            //onNotaListener.onTituloChanged(nota.getId(), nuevoTitulo);
                             nota.setTitulo(nuevoTitulo);
                         }
                     };
                     handler.postDelayed(guardarRunnable, 400);
                 }
             };
-            editTextTitulo.addTextChangedListener(textWatcher);
-
+            //editTextTitulo.addTextChangedListener(textWatcher);
+            */
+            /*
             buttonVerNota.setOnClickListener(v -> {
                 handler.removeCallbacks(guardarRunnable);
                 String nuevoTitulo = editTextTitulo.getText().toString().trim();
@@ -106,6 +119,18 @@ public class NotasAdapter extends RecyclerView.Adapter<NotasAdapter.NotaViewHold
                 }
                 onNotaListener.onVerNotaClick(nota.getId());
             });
+            */
+        }
+
+        @Override
+        public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+            // Creamos la opción "Eliminar" en el menú
+            MenuItem menuItemEliminar = menu.add(Menu.NONE, 1, 1, "Eliminar");
+            MenuItem menuItemRenombrar = menu.add(Menu.NONE, 2, 2, "Renombrar");
+
+            // Le asignamos una acción para que llame al método de la Activity
+            menuItemEliminar.setOnMenuItemClickListener(item -> onNotaListener.onContextEliminarNota(currentNota.getId()));
+            menuItemRenombrar.setOnMenuItemClickListener(item -> onNotaListener.onContextRenombrarNota(currentNota.getId()));
         }
     }
 }

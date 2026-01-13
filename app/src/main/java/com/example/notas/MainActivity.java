@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -32,7 +31,7 @@ import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNotaListener {
 
-    private EditText editTextTituloNota;
+    private EditText editTextCrearNota;
     private ImageButton buttonCrearNota;
     private RecyclerView recyclerView;
 
@@ -47,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
         recyclerView = findViewById(R.id.recyclerViewNotas);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        editTextTituloNota = findViewById(R.id.editTextTituloNota);
+        editTextCrearNota = findViewById(R.id.editTextCrearNota);
         buttonCrearNota = findViewById(R.id.buttonCrearNota);
 
         notas = new ArrayList<>();
@@ -56,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
 
         buttonCrearNota.setOnClickListener(v -> crearNuevaNota());
 
-        editTextTituloNota.setOnEditorActionListener((v, actionId, event) -> {
+        editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
                 crearNuevaNota();
                 return true;
@@ -89,26 +88,27 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
     }
 
     private void crearNuevaNota() {
-        String titulo = editTextTituloNota.getText().toString().trim();
+        String titulo = editTextCrearNota.getText().toString().trim();
         if (titulo.isEmpty()) {
             Toast.makeText(this, "El título no puede estar vacío", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        int nuevoNotaId = generarIdUnico();
+        int nuevaNotaId = generarIdUnico();
         String fechaActual = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
         String metadatos = titulo + "//;;" + fechaActual + "\n";
-        try (FileOutputStream fos = openFileOutput("nota_" + nuevoNotaId + ".txt", MODE_PRIVATE)) {
+        try (FileOutputStream fos = openFileOutput("nota_" + nuevaNotaId + ".txt", MODE_PRIVATE)) {
             fos.write(metadatos.getBytes());
         } catch (IOException e) {
             e.printStackTrace();
+            Toast.makeText(this, "Error mientras se creaba la nota", Toast.LENGTH_SHORT).show();
             return;
         }
 
         Intent intent = new Intent(this, DentroDeNotaActivity.class);
-        intent.putExtra("NOTA_ID", nuevoNotaId);
+        intent.putExtra("NOTA_ID", nuevaNotaId);
         startActivity(intent);
-        editTextTituloNota.setText("");
+        editTextCrearNota.setText("");
     }
 
     private void cargarNotasExistentes() {
@@ -136,13 +136,52 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
     }
 
     @Override
-    public void onVerNotaClick(int notaId) {
+    public void onClickVerNota(int notaId) {
         Intent intent = new Intent(this, DentroDeNotaActivity.class);
         intent.putExtra("NOTA_ID", notaId);
+        //Toast.makeText(this, "Nota seleccionada: " + notaId, Toast.LENGTH_SHORT).show();
         startActivity(intent);
     }
 
     @Override
+    public boolean onContextEliminarNota(int notaId) {
+        eliminarNota(notaId);
+
+        return true;
+    }
+
+    @Override
+    public boolean onContextRenombrarNota(int notaId) {
+        String nombreArchivo = "nota_" + notaId + ".txt";
+        String contenidoCompleto = leerContenidoCompleto(nombreArchivo);
+        if (contenidoCompleto == null) return false;
+
+        String[] lineas = contenidoCompleto.split("\n", 2);
+        String cuerpoNota = (lineas.length > 1) ? lineas[1] : "";
+        String titulo = lineas[0].split("//;;")[0].trim();
+
+        editTextCrearNota.setText(titulo);
+        editTextCrearNota.setHint("Renombra la nota");
+        editTextCrearNota.requestFocus();
+
+        editTextCrearNota.setSelection(editTextCrearNota.getText().length());
+        buttonCrearNota.setColorFilter(200);
+
+        editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
+                renombrarNota(titulo, cuerpoNota, nombreArchivo);
+                return true;
+            }
+            return false;
+        });
+
+        buttonCrearNota.setOnClickListener(v -> {
+            renombrarNota(titulo, cuerpoNota, nombreArchivo);
+        });
+        return true;
+    }
+
+    /*@Override
     public void onTituloChanged(int notaId, String nuevoTitulo) {
         String nombreArchivo = "nota_" + notaId + ".txt";
         String contenidoCompleto = leerContenidoCompleto(nombreArchivo);
@@ -162,12 +201,7 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
             e.printStackTrace();
             return;
         }
-
-        // -- LA SOLUCIÓN --
-        // Ya no llamamos a cargarNotasExistentes() ni a ningún notify().
-        // El guardado ocurre en segundo plano y la lista se reordenará la próxima
-        // vez que se llame a onResume() o el usuario pierda el foco.
-    }
+    }*/
 
     private String leerPrimeraLinea(String nombreArchivo) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(openFileInput(nombreArchivo)))) {
@@ -204,5 +238,58 @@ public class MainActivity extends AppCompatActivity implements NotasAdapter.OnNo
             }
         } while (!esUnico);
         return id;
+    }
+
+    private boolean eliminarNota(int notaId) {
+        String nombreArchivo = "nota_" + notaId + ".txt";
+        File archivo = new File(getFilesDir(), nombreArchivo);
+        if (archivo.exists()) {
+            archivo.delete();
+            ArrayList<Nota> aEliminar = new ArrayList<>();
+            for (Nota nota : notas) {
+                if (nota.getId() == notaId) {
+                    aEliminar.add(nota);
+                }
+            }
+            notas.removeAll(aEliminar);
+
+            adapter.notifyDataSetChanged();
+        } else {
+            Toast.makeText(this, "La nota no existe en el dispositivo", Toast.LENGTH_SHORT).show();
+        }
+
+        return false;
+    }
+
+    private boolean renombrarNota(String titulo, String cuerpoNota, String nombreArchivo) {
+        String nuevoTitulo = editTextCrearNota.getText().toString().trim();
+        if (!nuevoTitulo.equals(titulo)) {
+            String fechaActual = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(new Date());
+            String nuevosMetadatos = nuevoTitulo + "//;;" + fechaActual + "\n";
+            String nuevoContenidoCompleto = nuevosMetadatos + cuerpoNota;
+
+            try (FileOutputStream fos = openFileOutput(nombreArchivo, MODE_PRIVATE)) {
+                fos.write(nuevoContenidoCompleto.getBytes());
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+
+            cargarNotasExistentes();
+            editTextCrearNota.setText("");
+            buttonCrearNota.setColorFilter(null);
+            editTextCrearNota.setHint("Crea una nota");
+            buttonCrearNota.setOnClickListener(v1 -> {
+                crearNuevaNota();
+            });
+            editTextCrearNota.setOnEditorActionListener((v, actionId, event) -> {
+                if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
+                    crearNuevaNota();
+                    return true;
+                }
+                return false;
+            });
+        }
+        return true;
     }
 }

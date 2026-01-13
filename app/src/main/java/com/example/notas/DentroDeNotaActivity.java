@@ -27,9 +27,7 @@ import java.util.Locale;
 public class DentroDeNotaActivity extends AppCompatActivity {
 
     private EditText editTextContenido;
-    private TextView textViewNotaGuardada;
     private int notaId = -1;
-
     private String notaTitulo = "";
     private String notaFecha = "";
 
@@ -53,7 +51,6 @@ public class DentroDeNotaActivity extends AppCompatActivity {
         }
 
         editTextContenido = findViewById(R.id.editTextNota);
-        textViewNotaGuardada = findViewById(R.id.textViewNotaGuardada);
 
         Intent intent = getIntent();
         if (intent != null && intent.hasExtra("NOTA_ID")) {
@@ -62,9 +59,11 @@ public class DentroDeNotaActivity extends AppCompatActivity {
 
         if (notaId != -1) {
             cargarNota();
-            getSupportActionBar().setTitle(notaTitulo); // Usar el título cargado
+            getSupportActionBar().setTitle(notaTitulo);
         } else {
             getSupportActionBar().setTitle("Nueva Nota (Error)");
+            Toast.makeText(this, "Error al cargar la nota", Toast.LENGTH_SHORT).show();
+//            finish();
         }
 
         setupAutoGuardado();
@@ -73,19 +72,12 @@ public class DentroDeNotaActivity extends AppCompatActivity {
     private void setupAutoGuardado() {
         guardarRunnable = () -> {
             guardarNota();
-            if (textViewNotaGuardada != null) {
-                textViewNotaGuardada.setText("Guardado ✓");
-                handler.postDelayed(() -> textViewNotaGuardada.setText(""), 2000);
-            }
         };
 
         editTextContenido.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
-                if (textViewNotaGuardada != null) {
-                    textViewNotaGuardada.setText("Escribiendo...");
-                }
                 handler.removeCallbacks(guardarRunnable);
                 handler.postDelayed(guardarRunnable, 1000);
             }
@@ -102,11 +94,13 @@ public class DentroDeNotaActivity extends AppCompatActivity {
     private void cargarNota() {
         String nombreArchivo = "nota_" + notaId + ".txt";
         StringBuilder contenidoParaEditor = new StringBuilder();
+
         try (FileInputStream fis = openFileInput(nombreArchivo);
              InputStreamReader isr = new InputStreamReader(fis);
              BufferedReader bufferedReader = new BufferedReader(isr)) {
 
             String primeraLinea = bufferedReader.readLine();
+
             if (primeraLinea != null && primeraLinea.contains("//;;")) {
                 String[] partes = primeraLinea.split("//;;");
                 this.notaTitulo = partes[0];
@@ -128,6 +122,11 @@ public class DentroDeNotaActivity extends AppCompatActivity {
 
         editTextContenido.setText(contenidoParaEditor.toString().trim());
         editTextContenido.setSelection(editTextContenido.getText().length());
+
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(notaTitulo);
+            getSupportActionBar().setSubtitle(notaFecha);
+        }
     }
 
     private void guardarNota() {
