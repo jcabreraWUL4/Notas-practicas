@@ -1,21 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:focusable="true"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:clickable="true"
     android:fitsSystemWindows="true"
-    android:focusableInTouchMode="true">
+    tools:context=".DentroDeNotaActivity">
 
-    <EditText
-        android:id="@+id/editTextNota"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="300dp"
-        android:background="@android:color/transparent"
-        android:gravity="top"
-        android:hint="Escribe una nota" />
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-</LinearLayout>
+        <EditText
+            android:id="@+id/editTextNota"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="250dp"
+            android:background="@android:color/transparent"
+            android:gravity="top"
+            android:hint="Escribe una nota" />
+
+    </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabVoz"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="Añadir por voz"
+        android:focusable="false"
+        app:srcCompat="@android:drawable/ic_btn_speak_now" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
